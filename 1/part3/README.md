@@ -1,245 +1,297 @@
+# بخش سوم تمرین — ساخت سرویس، کانتینری‌سازی و اجرا در ماشین مجازی
 
-# to build the docker
-```bash
+## توضیح پروژه
+
+در این بخش، یک سرویس محاسباتی ساده به زبان Go پیاده‌سازی شده است که از طریق پروتکل HTTP درخواست‌ها را دریافت می‌کند. این سرویس در قالب یک Docker image ساخته شده و داخل یک ماشین مجازی اجرا می‌شود. هدف اصلی این آزمایش، آشنایی با تبدیل برنامه به سرویس شبکه‌ای، کانتینری‌سازی، و برقراری ارتباط از سیستم Host به سرویس داخل Guest VM است.
+
+سرویس دو endpoint اصلی دارد: یکی برای بررسی سلامت (`/health`) و دیگری برای انجام عملیات‌های محاسباتی (`/compute`). تمام خطاهای مورد انتظار مانند تقسیم بر صفر، عمل نامعتبر، پارامترهای missing، و ورودی غیرعددی به درستی مدیریت می‌شوند.
+
+---
+
+# ساختار فایل‌ها
+```text
+part3/
+├── main.go
+├── Dockerfile
+├── README.md
+```
+
+---
+
+# پیش‌نیازها
+
+* Linux Operating System
+* GO Language
+* Docker
+* curl (برای تست)
+
+---
+
+# تنظیم GOPROXY
+
+مطابق صورت تمرین، قبل از اجرا دستور زیر را اجرا کنید:
+```text
+go env -w GOPROXY=https://mirror-go.runflare.com
+```
+
+---
+
+# نحوه ساخت Docker Image
+
+ابتدا وارد پوشه `part3` شوید:
+```text
+cd part3
+```
+
+سپس image را بسازید:
+```text
 sudo docker build -t hw1-part3 .
 ```
 
-Expected success output:
-
+خروجی موفقیت‌آمیز:
 ```text
 Successfully tagged hw1-part3:latest
 ```
 
 ---
 
-# Run Docker Container
-```bash
+# نحوه اجرای کانتینر
+```text
 sudo docker run -p 8080:8080 hw1-part3
 ```
-Expected output:
 
+
+خروجی موفقیت‌آمیز:
 ```text
 [server] Starting server on :8080
 ```
 
+
+نکته: سرویس روی پورت `8080` در دسترس خواهد بود.
+
 ---
 
-# Testing the Service 
+# تست سرویس
 
-Open a **second terminal** and run tests.
+در یک ترمینال جدید (یا از روی Host) دستورات زیر را اجرا کنید.
+
 ---
 
-1. Health Check
-
-```bash
+## 1. Health Check
+```text
 curl http://localhost:8080/health
 ```
 
-Expected output:
 
+خروجی موفقیت‌آمیز:
 ```text
 OK
 ```
 
-Server log:
-
-```text
-[server] Health check request received
-```
 
 ---
 
-2. ADD Operation
-
-```bash
+## 2. عملیات ADD
+```text
 curl "http://localhost:8080/compute?op=ADD&a=5&b=7"
 ```
 
-Expected output:
 
-```json
+خروجی موفقیت‌آمیز:
+```JSON
 {"status":"ok","operation":"ADD","a":5,"b":7,"result":12}
 ```
 
-Server log:
-
-```text
-[server] Request received: op=ADD a=5.000000 b=7.000000
-```
 
 ---
 
-3. SUB Operation
-
-```bash
+## 3. عملیات SUB
+```text
 curl "http://localhost:8080/compute?op=SUB&a=10&b=3"
 ```
 
-Expected:
 
-```json
+خروجی موفقیت‌آمیز:
+```JSON
 {"status":"ok","operation":"SUB","a":10,"b":3,"result":7}
 ```
 
+
 ---
 
-4. MUL Operation
-
-```bash
+## 4. عملیات MUL
+```text
 curl "http://localhost:8080/compute?op=MUL&a=4&b=6"
 ```
 
-Expected:
 
-```json
+خروجی موفقیت‌آمیز:
+```JSON
 {"status":"ok","operation":"MUL","a":4,"b":6,"result":24}
 ```
 
+
 ---
 
-5. DIV Operation
-
-```bash
+## 5. عملیات DIV
+```text
 curl "http://localhost:8080/compute?op=DIV&a=8&b=2"
 ```
 
-Expected:
 
-```json
+خروجی موفقیت‌آمیز:
+```JSON
 {"status":"ok","operation":"DIV","a":8,"b":2,"result":4}
 ```
 
----
-
-# Error Handling Tests
 
 ---
 
-## Division By Zero
+# مدیریت خطاها
 
-```bash
+## تقسیم بر صفر
+```text
 curl "http://localhost:8080/compute?op=DIV&a=5&b=0"
 ```
 
-Expected:
 
-```json
+خروجی:
+```JSON
 {"status":"err","error":"division_by_zero"}
 ```
 
+
 ---
 
-## Unknown Operation
-
-```bash
+## عمل نامعتبر
+```text
 curl "http://localhost:8080/compute?op=POW&a=2&b=3"
 ```
 
-Expected:
 
-```json
+خروجی:
+```JSON
 {"status":"err","error":"unknown_operation"}
 ```
 
+
 ---
 
-## Missing Parameter
-
-```bash
+## پارامتر missing
+```text
 curl "http://localhost:8080/compute?op=ADD&a=5"
 ```
 
-Expected:
 
+خروجی:
 ```text
 missing parameters
 ```
 
+
 ---
 
-## Invalid Number
-
-```bash
+## ورودی غیرعددی
+```text
 curl "http://localhost:8080/compute?op=ADD&a=abc&b=5"
 ```
 
-Expected:
 
-```text
+خروجی:
+```test
 invalid a
 ```
 
+
 ---
 
-# Verify Running Container
-
-Check running containers:
-
-```bash
+# بررسی کانتینر در حال اجرا
+```text
 sudo docker ps
 ```
 
-Expected:
 
+خروجی نمونه:
 ```text
-CONTAINER ID   IMAGE       COMMAND      CREATED         STATUS         PORTS                                         NAMES       
-4bc5bc05b0f8   hw1-part3   "./server"   8 minutes ago   Up 8 minutes   0.0.0.0:8080->8080/tcp, [::]:8080->8080/tcp   silly_nash  
+CONTAINER ID IMAGE COMMAND CREATED STATUS PORTS NAMES
+4bc5bc05b0f8 hw1-part3 "./server" 8 minutes ago Up 8 minutes 0.0.0.0:8080->8080/tcp, [::]:8080->8080/tcp silly_nash
 ```
 
 
 ---
 
-Stop Container with ctrl + c or command below
+# توقف کانتینر
 
-```bash
+با `Ctrl+C` در ترمینال اجرا، یا دستور زیر:
+```text
 sudo docker stop <container_id>
 ```
 
+
 ---
 
-# Run Again Later
-
-```bash
+# اجرای مجدد بعداً
+```text
 cd part3
 sudo docker run -p 8080:8080 hw1-part3
 ```
 
+
 ---
 
-# Rebuild After Code Changes
-
-
-```bash
+# بازسازی بعد از تغییر کد
+```text
 docker build -t hw1-part3 .
 docker run -p 8080:8080 hw1-part3
 ```
 
+
 ---
 
-# Testing From Windows Host - in powershell
+# تست از روی Windows Host (PowerShell)
 
-
-```powershell
+## Health Check
+```text
 curl http://localhost:8080/health
 ```
 
-Expected:
 
+خروجی:
 ```text
 OK
 ```
 
-Compute:
 
-```powershell
+## عملیات محاسباتی
+```text
 curl "http://localhost:8080/compute?op=SUB&a=10&b=3"
 ```
 
-Expected:
 
-```json
+خروجی:
+```JSON
 {"status":"ok","operation":"SUB","a":10,"b":3,"result":7}
 ```
 
 
 ---
+
+# خلاصه پورت‌ها و دسترسی
+
+| آیتم | مقدار |
+|------|-------|
+| پورت سرویس | 8080 |
+| پورت منتشر شده روی Host | 8080 |
+| آدرس دسترسی از Host | http://localhost:8080 |
+| آدرس دسترسی از VM (داخل کانتینر) | :8080 |
+
+---
+
+# اثبات اجرا در ماشین مجازی
+
+برای اثبات اجرای موفق سرویس داخل ماشین مجازی و اتصال از Host:
+
+1. کانتینر داخل VM اجرا می‌شود
+2. پورت 8080 از VM به Host forward شده است
+3. درخواست‌های curl از Host به موفقیت پاسخ دریافت می‌کنند
+4. لاگ‌های سرویس در ترمینال VM نمایش داده می‌شود.
