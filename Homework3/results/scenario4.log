@@ -1,0 +1,145 @@
+
+==============================================================================
+SCENARIO 4 — Effect of Network Delay
+==============================================================================
+
+── Testing with network_delay_ms=0 on replica1's outgoing replication ────
+[config] mode=eventual  delays: replica1=0ms, replica2=0ms, replica3=0ms
+$ docker compose restart
+time="2026-06-19T22:05:42+03:30" level=warning msg="/mnt/c/Users/sarag/Downloads/HW3/docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+ Container replica1  Restarting
+ Container replica2  Restarting
+ Container replica3  Restarting
+ Container replica2  Started
+ Container replica1  Started
+ Container replica3  Started
+
+── Waiting for all replicas to become healthy ────────────────────────────
+$ curl -s 'http://localhost:8080/health'
+  [2026-06-19 22:05:42] HEALTH replica1 -> HTTP 200 [OK]  round_trip=1.8ms  body={"replica": "replica1", "status": "ok", "time": "2026-06-19T18:35:42Z"}
+$ curl -s 'http://localhost:8081/health'
+  [2026-06-19 22:05:42] HEALTH replica2 -> HTTP 200 [OK]  round_trip=1.8ms  body={"replica": "replica2", "status": "ok", "time": "2026-06-19T18:35:42Z"}
+$ curl -s 'http://localhost:8082/health'
+  [2026-06-19 22:05:42] HEALTH replica3 -> HTTP 200 [OK]  round_trip=2.2ms  body={"replica": "replica3", "status": "ok", "time": "2026-06-19T18:35:42Z"}
+
+── PUT w_delay_0=A on replica1 ───────────────────────────────────────────
+$ curl -s -X POST http://localhost:8080/put -H 'Content-Type: application/json' -d '{"key":"w_delay_0","value":"A"}'
+  [2026-06-19 22:05:42] PUT(delay=0ms) replica1 -> HTTP 200 [OK]  round_trip=1.8ms  body={"success": true, "replica_id": "", "data": {"key": "w_delay_0", "value": "A", "version": 1, "updated_by": "replica1", "updated_at": "2026-06-19T18:35:42.791778452Z"}, "latency_ms": 0.218}
+
+── Polling replica2 for convergence (delay=0ms) ──────────────────────────
+$ curl -s 'http://localhost:8081/get?key=w_delay_0'
+  [2026-06-19 22:05:42] GET(poll 1, delay=0ms) replica2 -> HTTP 200 [OK]  round_trip=1.6ms  body={"success": true, "replica_id": "", "data": {"key": "w_delay_0", "value": "A", "version": 1, "updated_by": "replica1", "updated_at": "2026-06-19T18:35:42.791778452Z"}, "latency_ms": 0.043}
+
+── Result for delay=0ms ──────────────────────────────────────────────────
+  PUT latency: 1.8ms  (should stay flat regardless of delay, since eventual mode doesn't block on replication)
+  Convergence time: 4.01ms  (should track closely with injected delay of 0ms)
+
+── Testing with network_delay_ms=500 on replica1's outgoing replication ──
+[config] mode=eventual  delays: replica1=500ms, replica2=0ms, replica3=0ms
+$ docker compose restart
+time="2026-06-19T22:05:43+03:30" level=warning msg="/mnt/c/Users/sarag/Downloads/HW3/docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+ Container replica1  Restarting
+ Container replica2  Restarting
+ Container replica3  Restarting
+ Container replica2  Started
+ Container replica3  Started
+ Container replica1  Started
+
+── Waiting for all replicas to become healthy ────────────────────────────
+$ curl -s 'http://localhost:8080/health'
+  [2026-06-19 22:05:44] HEALTH replica1 -> HTTP 200 [OK]  round_trip=3.2ms  body={"replica": "replica1", "status": "ok", "time": "2026-06-19T18:35:44Z"}
+$ curl -s 'http://localhost:8081/health'
+  [2026-06-19 22:05:44] HEALTH replica2 -> HTTP 200 [OK]  round_trip=1.5ms  body={"replica": "replica2", "status": "ok", "time": "2026-06-19T18:35:44Z"}
+$ curl -s 'http://localhost:8082/health'
+  [2026-06-19 22:05:44] HEALTH replica3 -> HTTP 200 [OK]  round_trip=1.4ms  body={"replica": "replica3", "status": "ok", "time": "2026-06-19T18:35:44Z"}
+
+── PUT w_delay_500=A on replica1 ─────────────────────────────────────────
+$ curl -s -X POST http://localhost:8080/put -H 'Content-Type: application/json' -d '{"key":"w_delay_500","value":"A"}'
+  [2026-06-19 22:05:44] PUT(delay=500ms) replica1 -> HTTP 200 [OK]  round_trip=1.5ms  body={"success": true, "replica_id": "", "data": {"key": "w_delay_500", "value": "A", "version": 1, "updated_by": "replica1", "updated_at": "2026-06-19T18:35:44.330207734Z"}, "latency_ms": 0.188}
+
+── Polling replica2 for convergence (delay=500ms) ────────────────────────
+$ curl -s 'http://localhost:8081/get?key=w_delay_500'
+  [2026-06-19 22:05:44] GET(poll 1, delay=500ms) replica2 -> HTTP 404 [FAIL]  round_trip=1.5ms  body={"success": false, "replica_id": "", "error": "key not found", "latency_ms": 0}
+$ curl -s 'http://localhost:8081/get?key=w_delay_500'
+  [2026-06-19 22:05:44] GET(poll 2, delay=500ms) replica2 -> HTTP 404 [FAIL]  round_trip=4.2ms  body={"success": false, "replica_id": "", "error": "key not found", "latency_ms": 0}
+$ curl -s 'http://localhost:8081/get?key=w_delay_500'
+  [2026-06-19 22:05:44] GET(poll 3, delay=500ms) replica2 -> HTTP 404 [FAIL]  round_trip=3.4ms  body={"success": false, "replica_id": "", "error": "key not found", "latency_ms": 0}
+$ curl -s 'http://localhost:8081/get?key=w_delay_500'
+  [2026-06-19 22:05:44] GET(poll 4, delay=500ms) replica2 -> HTTP 404 [FAIL]  round_trip=3.6ms  body={"success": false, "replica_id": "", "error": "key not found", "latency_ms": 0}
+$ curl -s 'http://localhost:8081/get?key=w_delay_500'
+  [2026-06-19 22:05:44] GET(poll 5, delay=500ms) replica2 -> HTTP 404 [FAIL]  round_trip=2.3ms  body={"success": false, "replica_id": "", "error": "key not found", "latency_ms": 0}
+$ curl -s 'http://localhost:8081/get?key=w_delay_500'
+  [2026-06-19 22:05:44] GET(poll 6, delay=500ms) replica2 -> HTTP 200 [OK]  round_trip=4.7ms  body={"success": true, "replica_id": "", "data": {"key": "w_delay_500", "value": "A", "version": 1, "updated_by": "replica1", "updated_at": "2026-06-19T18:35:44.330207734Z"}, "latency_ms": 0.386}
+
+── Result for delay=500ms ────────────────────────────────────────────────
+  PUT latency: 1.5ms  (should stay flat regardless of delay, since eventual mode doesn't block on replication)
+  Convergence time: 551.38ms  (should track closely with injected delay of 500ms)
+
+── Testing with network_delay_ms=2000 on replica1's outgoing replication ─
+[config] mode=eventual  delays: replica1=2000ms, replica2=0ms, replica3=0ms
+$ docker compose restart
+time="2026-06-19T22:05:45+03:30" level=warning msg="/mnt/c/Users/sarag/Downloads/HW3/docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+ Container replica2  Restarting
+ Container replica3  Restarting
+ Container replica1  Restarting
+ Container replica1  Started
+ Container replica2  Started
+ Container replica3  Started
+
+── Waiting for all replicas to become healthy ────────────────────────────
+$ curl -s 'http://localhost:8080/health'
+  [2026-06-19 22:05:46] HEALTH replica1 -> HTTP 200 [OK]  round_trip=2.4ms  body={"replica": "replica1", "status": "ok", "time": "2026-06-19T18:35:46Z"}
+$ curl -s 'http://localhost:8081/health'
+  [2026-06-19 22:05:46] HEALTH replica2 -> HTTP 200 [OK]  round_trip=1.6ms  body={"replica": "replica2", "status": "ok", "time": "2026-06-19T18:35:46Z"}
+$ curl -s 'http://localhost:8082/health'
+  [2026-06-19 22:05:46] HEALTH replica3 -> HTTP 200 [OK]  round_trip=1.6ms  body={"replica": "replica3", "status": "ok", "time": "2026-06-19T18:35:46Z"}
+
+── PUT w_delay_2000=A on replica1 ────────────────────────────────────────
+$ curl -s -X POST http://localhost:8080/put -H 'Content-Type: application/json' -d '{"key":"w_delay_2000","value":"A"}'
+  [2026-06-19 22:05:46] PUT(delay=2000ms) replica1 -> HTTP 200 [OK]  round_trip=1.4ms  body={"success": true, "replica_id": "", "data": {"key": "w_delay_2000", "value": "A", "version": 1, "updated_by": "replica1", "updated_at": "2026-06-19T18:35:46.46228067Z"}, "latency_ms": 0.155}
+
+── Polling replica2 for convergence (delay=2000ms) ───────────────────────
+$ curl -s 'http://localhost:8081/get?key=w_delay_2000'
+  [2026-06-19 22:05:46] GET(poll 1, delay=2000ms) replica2 -> HTTP 404 [FAIL]  round_trip=1.5ms  body={"success": false, "replica_id": "", "error": "key not found", "latency_ms": 0}
+$ curl -s 'http://localhost:8081/get?key=w_delay_2000'
+  [2026-06-19 22:05:46] GET(poll 2, delay=2000ms) replica2 -> HTTP 404 [FAIL]  round_trip=3.3ms  body={"success": false, "replica_id": "", "error": "key not found", "latency_ms": 0}
+$ curl -s 'http://localhost:8081/get?key=w_delay_2000'
+  [2026-06-19 22:05:46] GET(poll 3, delay=2000ms) replica2 -> HTTP 404 [FAIL]  round_trip=3.4ms  body={"success": false, "replica_id": "", "error": "key not found", "latency_ms": 0}
+$ curl -s 'http://localhost:8081/get?key=w_delay_2000'
+  [2026-06-19 22:05:46] GET(poll 4, delay=2000ms) replica2 -> HTTP 404 [FAIL]  round_trip=3.8ms  body={"success": false, "replica_id": "", "error": "key not found", "latency_ms": 0}
+$ curl -s 'http://localhost:8081/get?key=w_delay_2000'
+  [2026-06-19 22:05:46] GET(poll 5, delay=2000ms) replica2 -> HTTP 404 [FAIL]  round_trip=3.5ms  body={"success": false, "replica_id": "", "error": "key not found", "latency_ms": 0}
+$ curl -s 'http://localhost:8081/get?key=w_delay_2000'
+  [2026-06-19 22:05:47] GET(poll 6, delay=2000ms) replica2 -> HTTP 404 [FAIL]  round_trip=3.1ms  body={"success": false, "replica_id": "", "error": "key not found", "latency_ms": 0}
+$ curl -s 'http://localhost:8081/get?key=w_delay_2000'
+  [2026-06-19 22:05:47] GET(poll 7, delay=2000ms) replica2 -> HTTP 404 [FAIL]  round_trip=3.9ms  body={"success": false, "replica_id": "", "error": "key not found", "latency_ms": 0}
+$ curl -s 'http://localhost:8081/get?key=w_delay_2000'
+  [2026-06-19 22:05:47] GET(poll 8, delay=2000ms) replica2 -> HTTP 404 [FAIL]  round_trip=2.7ms  body={"success": false, "replica_id": "", "error": "key not found", "latency_ms": 0}
+$ curl -s 'http://localhost:8081/get?key=w_delay_2000'
+  [2026-06-19 22:05:47] GET(poll 9, delay=2000ms) replica2 -> HTTP 404 [FAIL]  round_trip=2.1ms  body={"success": false, "replica_id": "", "error": "key not found", "latency_ms": 0}
+$ curl -s 'http://localhost:8081/get?key=w_delay_2000'
+  [2026-06-19 22:05:47] GET(poll 10, delay=2000ms) replica2 -> HTTP 404 [FAIL]  round_trip=3.1ms  body={"success": false, "replica_id": "", "error": "key not found", "latency_ms": 0}
+$ curl -s 'http://localhost:8081/get?key=w_delay_2000'
+  [2026-06-19 22:05:47] GET(poll 11, delay=2000ms) replica2 -> HTTP 404 [FAIL]  round_trip=4.0ms  body={"success": false, "replica_id": "", "error": "key not found", "latency_ms": 0}
+$ curl -s 'http://localhost:8081/get?key=w_delay_2000'
+  [2026-06-19 22:05:47] GET(poll 12, delay=2000ms) replica2 -> HTTP 404 [FAIL]  round_trip=3.9ms  body={"success": false, "replica_id": "", "error": "key not found", "latency_ms": 0}
+$ curl -s 'http://localhost:8081/get?key=w_delay_2000'
+  [2026-06-19 22:05:47] GET(poll 13, delay=2000ms) replica2 -> HTTP 404 [FAIL]  round_trip=4.4ms  body={"success": false, "replica_id": "", "error": "key not found", "latency_ms": 0}
+$ curl -s 'http://localhost:8081/get?key=w_delay_2000'
+  [2026-06-19 22:05:47] GET(poll 14, delay=2000ms) replica2 -> HTTP 404 [FAIL]  round_trip=3.9ms  body={"success": false, "replica_id": "", "error": "key not found", "latency_ms": 0}
+$ curl -s 'http://localhost:8081/get?key=w_delay_2000'
+  [2026-06-19 22:05:47] GET(poll 15, delay=2000ms) replica2 -> HTTP 404 [FAIL]  round_trip=3.1ms  body={"success": false, "replica_id": "", "error": "key not found", "latency_ms": 0}
+$ curl -s 'http://localhost:8081/get?key=w_delay_2000'
+  [2026-06-19 22:05:48] GET(poll 16, delay=2000ms) replica2 -> HTTP 404 [FAIL]  round_trip=1.7ms  body={"success": false, "replica_id": "", "error": "key not found", "latency_ms": 0}
+$ curl -s 'http://localhost:8081/get?key=w_delay_2000'
+  [2026-06-19 22:05:48] GET(poll 17, delay=2000ms) replica2 -> HTTP 404 [FAIL]  round_trip=2.0ms  body={"success": false, "replica_id": "", "error": "key not found", "latency_ms": 0}
+$ curl -s 'http://localhost:8081/get?key=w_delay_2000'
+  [2026-06-19 22:05:48] GET(poll 18, delay=2000ms) replica2 -> HTTP 404 [FAIL]  round_trip=2.9ms  body={"success": false, "replica_id": "", "error": "key not found", "latency_ms": 0}
+$ curl -s 'http://localhost:8081/get?key=w_delay_2000'
+  [2026-06-19 22:05:48] GET(poll 19, delay=2000ms) replica2 -> HTTP 404 [FAIL]  round_trip=2.0ms  body={"success": false, "replica_id": "", "error": "key not found", "latency_ms": 0}
+$ curl -s 'http://localhost:8081/get?key=w_delay_2000'
+  [2026-06-19 22:05:48] GET(poll 20, delay=2000ms) replica2 -> HTTP 200 [OK]  round_trip=1.8ms  body={"success": true, "replica_id": "", "data": {"key": "w_delay_2000", "value": "A", "version": 1, "updated_by": "replica1", "updated_at": "2026-06-19T18:35:46.46228067Z"}, "latency_ms": 0.041}
+
+── Result for delay=2000ms ───────────────────────────────────────────────
+  PUT latency: 1.35ms  (should stay flat regardless of delay, since eventual mode doesn't block on replication)
+  Convergence time: 2044.25ms  (should track closely with injected delay of 2000ms)

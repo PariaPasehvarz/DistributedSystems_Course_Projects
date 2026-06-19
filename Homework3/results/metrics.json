@@ -1,0 +1,68 @@
+{
+  "s1_put_latency_ms": 3.17,
+  "s1_put_server_latency_ms": 0.593,
+  "s1_immediate_read_stale": false,
+  "s1_convergence_time_ms": 5.58,
+  "s1_polls_until_converged": 1,
+  "s1_stale_reads_observed": 0,
+  "s2a_put_status": 200,
+  "s2a_put_latency_ms": 2.78,
+  "s2a_put_succeeded_despite_failure": true,
+  "s2a_replica3_recovered_value_present": false,
+  "s2b_put_status": 200,
+  "s2b_put_latency_ms": 9.56,
+  "s2b_quorum_succeeded_with_1_down": true,
+  "s2c_put_status": 503,
+  "s2c_put_latency_ms": 5003.49,
+  "s2c_quorum_failed_with_2_down": true,
+  "s3_put_r1_latency_ms": 2.7,
+  "s3_put_r2_latency_ms": 3.35,
+  "s3_final_values": {
+    "replica1": {
+      "key": "z",
+      "value": "from_r2",
+      "version": 1,
+      "updated_by": "replica2",
+      "updated_at": "2026-06-19T18:35:39.093650667Z"
+    },
+    "replica2": {
+      "key": "z",
+      "value": "from_r2",
+      "version": 1,
+      "updated_by": "replica2",
+      "updated_at": "2026-06-19T18:35:39.093650667Z"
+    },
+    "replica3": {
+      "key": "z",
+      "value": "from_r2",
+      "version": 1,
+      "updated_by": "replica2",
+      "updated_at": "2026-06-19T18:35:39.093650667Z"
+    }
+  },
+  "s3_converged_to_single_value": true,
+  "s3_winning_value": "from_r2",
+  "s4_runs": [
+    {
+      "delay_ms": 0,
+      "put_latency_ms": 1.8,
+      "convergence_time_ms": 4.01,
+      "polls_until_converged": 1,
+      "converged": true
+    },
+    {
+      "delay_ms": 500,
+      "put_latency_ms": 1.5,
+      "convergence_time_ms": 551.38,
+      "polls_until_converged": 6,
+      "converged": true
+    },
+    {
+      "delay_ms": 2000,
+      "put_latency_ms": 1.35,
+      "convergence_time_ms": 2044.25,
+      "polls_until_converged": 20,
+      "converged": true
+    }
+  ]
+}

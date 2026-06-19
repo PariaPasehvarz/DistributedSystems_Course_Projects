@@ -1,0 +1,16 @@
+{
+  "replica_id": "replica1",
+  "port": 8080,
+  "consistency_mode": "eventual",
+  "network_delay_ms": 0,
+  "peers": [
+    {
+      "id": "replica2",
+      "address": "http://replica2:8081"
+    },
+    {
+      "id": "replica3",
+      "address": "http://replica3:8082"
+    }
+  ]
+}

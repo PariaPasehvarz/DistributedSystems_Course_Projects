@@ -1,0 +1,169 @@
+
+==============================================================================
+HW3 ORCHESTRATOR — Full Automated Test Run
+==============================================================================
+Started: 2026-06-19 22:05:13
+Project root: /mnt/c/Users/sarag/Downloads/HW3
+
+── Bringing up all replicas (initial state: eventual) ────────────────────
+[config] mode=eventual  delays: replica1=0ms, replica2=0ms, replica3=0ms
+$ docker compose up --build -d
+time="2026-06-19T22:05:15+03:30" level=warning msg="/mnt/c/Users/sarag/Downloads/HW3/docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+time="2026-06-19T22:05:15+03:30" level=warning msg="Docker Compose is configured to build using Bake, but buildx isn't installed"
+#0 building with "default" instance using docker driver
+
+#1 [replica3 internal] load build definition from Dockerfile
+#1 transferring dockerfile: 371B 0.1s done
+#1 DONE 0.1s
+
+#2 [replica2 internal] load build definition from Dockerfile
+#2 transferring dockerfile: 371B 0.0s done
+#2 DONE 0.1s
+
+#3 [replica1 internal] load build definition from Dockerfile
+#3 transferring dockerfile: 371B 0.0s done
+#3 DONE 0.1s
+
+#4 [replica2 internal] load metadata for docker.io/library/golang:1.21-alpine
+#4 DONE 0.4s
+
+#5 [replica1 internal] load metadata for docker.io/library/alpine:3.19
+#5 DONE 0.4s
+
+#6 [replica1 internal] load .dockerignore
+#6 transferring context: 2B 0.0s done
+#6 DONE 0.0s
+
+#7 [replica3 internal] load .dockerignore
+#7 transferring context: 2B 0.0s done
+#7 DONE 0.0s
+
+#8 [replica2 internal] load .dockerignore
+#8 transferring context: 2B 0.0s done
+#8 DONE 0.1s
+
+#9 [replica2 builder 1/6] FROM docker.io/library/golang:1.21-alpine@sha256:2414035b086e3c42b99654c8b26e6f5b1b1598080d65fd03c7f499552ff4dc94
+#9 DONE 0.0s
+
+#10 [replica2 stage-1 1/3] FROM docker.io/library/alpine:3.19@sha256:6baf43584bcb78f2e5847d1de515f23499913ac9f12bdf834811a3145eb11ca1
+#10 DONE 0.0s
+
+#11 [replica2 internal] load build context
+#11 transferring context: 1.95kB 0.1s done
+#11 DONE 0.1s
+
+#12 [replica1 internal] load build context
+#12 transferring context: 1.95kB 0.1s done
+#12 DONE 0.1s
+
+#13 [replica3 internal] load build context
+#13 transferring context: 1.95kB 0.1s done
+#13 DONE 0.1s
+
+#14 [replica1 stage-1 2/3] WORKDIR /app
+#14 CACHED
+
+#15 [replica1 stage-1 3/3] COPY --from=builder /replica /app/replica
+#15 CACHED
+
+#16 [replica2 builder 2/6] WORKDIR /app
+#16 CACHED
+
+#17 [replica2 builder 3/6] COPY go.mod ./
+#17 CACHED
+
+#18 [replica2 builder 5/6] COPY . .
+#18 CACHED
+
+#19 [replica2 builder 4/6] RUN go mod download
+#19 CACHED
+
+#20 [replica2 builder 6/6] RUN go build -o /replica .
+#20 CACHED
+
+#14 [replica3 stage-1 2/3] WORKDIR /app
+#14 CACHED
+
+#15 [replica3 stage-1 3/3] COPY --from=builder /replica /app/replica
+#15 CACHED
+
+#21 [replica2] exporting to image
+#21 exporting layers done
+#21 writing image sha256:c5be0560cb290c77a9b9dd3704aad454042ab51fbb8d0ba545cc6fd8f3dc5b89 done
+#21 naming to docker.io/library/hw3-replica2 0.0s done
+#21 DONE 0.0s
+
+#22 [replica1] exporting to image
+#22 exporting layers done
+#22 writing image sha256:1cd1e29bf9173bc1e1ead34a8473e4712efc0846257b93d530e90b51128925db 0.0s done
+#22 naming to docker.io/library/hw3-replica1 0.0s done
+#22 DONE 0.1s
+
+#23 [replica3] exporting to image
+#23 exporting layers done
+#23 writing image sha256:26e8007da6dd843a264e7113fbb761f2649f5812a56a6202796cdea8b6092382 0.0s done
+#23 naming to docker.io/library/hw3-replica3 0.0s done
+#23 DONE 0.1s
+
+#24 [replica2] resolving provenance for metadata file
+#24 DONE 0.1s
+
+#25 [replica1] resolving provenance for metadata file
+#25 DONE 0.0s
+
+#26 [replica3] resolving provenance for metadata file
+#26 DONE 0.0s
+ replica1  Built
+ replica2  Built
+ replica3  Built
+ Container replica3  Recreate
+ Container replica1  Recreate
+ Container replica2  Recreate
+ Container replica1  Recreated
+ Container replica3  Recreated
+ Container replica2  Recreated
+ Container replica2  Starting
+ Container replica3  Starting
+ Container replica1  Starting
+ Container replica2  Started
+ Container replica1  Started
+ Container replica3  Started
+
+── Waiting for all replicas to become healthy ────────────────────────────
+$ curl -s 'http://localhost:8080/health'
+  [2026-06-19 22:05:18] HEALTH replica1 -> HTTP 200 [OK]  round_trip=56.9ms  body={"replica": "replica1", "status": "ok", "time": "2026-06-19T18:35:18Z"}
+$ curl -s 'http://localhost:8081/health'
+  [2026-06-19 22:05:18] HEALTH replica2 -> HTTP 200 [OK]  round_trip=2.2ms  body={"replica": "replica2", "status": "ok", "time": "2026-06-19T18:35:18Z"}
+$ curl -s 'http://localhost:8082/health'
+  [2026-06-19 22:05:18] HEALTH replica3 -> HTTP 200 [OK]  round_trip=2.3ms  body={"replica": "replica3", "status": "ok", "time": "2026-06-19T18:35:18Z"}
+
+── Restoring default configuration (eventual, no delay) ──────────────────
+[config] mode=eventual  delays: replica1=0ms, replica2=0ms, replica3=0ms
+$ docker compose restart
+time="2026-06-19T22:05:49+03:30" level=warning msg="/mnt/c/Users/sarag/Downloads/HW3/docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+ Container replica2  Restarting
+ Container replica1  Restarting
+ Container replica3  Restarting
+ Container replica1  Started
+ Container replica2  Started
+ Container replica3  Started
+
+── Waiting for all replicas to become healthy ────────────────────────────
+$ curl -s 'http://localhost:8080/health'
+  [2026-06-19 22:05:50] HEALTH replica1 -> HTTP 200 [OK]  round_trip=1.8ms  body={"replica": "replica1", "status": "ok", "time": "2026-06-19T18:35:50Z"}
+$ curl -s 'http://localhost:8081/health'
+  [2026-06-19 22:05:50] HEALTH replica2 -> HTTP 200 [OK]  round_trip=1.3ms  body={"replica": "replica2", "status": "ok", "time": "2026-06-19T18:35:50Z"}
+$ curl -s 'http://localhost:8082/health'
+  [2026-06-19 22:05:50] HEALTH replica3 -> HTTP 200 [OK]  round_trip=1.4ms  body={"replica": "replica3", "status": "ok", "time": "2026-06-19T18:35:50Z"}
+
+==============================================================================
+ALL SCENARIOS COMPLETE
+==============================================================================
+Finished: 2026-06-19 22:05:50
+
+Report-ready files generated in results/:
+  - REPORT_SUMMARY.md   <- narrative text, ready to paste into your report
+  - metrics_table.md    <- the required metrics table, pre-filled
+  - metrics.json        <- raw numbers, in case you want custom formatting
+  - scenario1.log .. scenario4.log  <- full command-by-command evidence
+  - FULL_RUN.log        <- everything above, in one file

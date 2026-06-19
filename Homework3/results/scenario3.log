@@ -1,0 +1,41 @@
+
+==============================================================================
+SCENARIO 3 — Concurrent Conflict (Eventual Consistency)
+==============================================================================
+[config] mode=eventual  delays: replica1=0ms, replica2=0ms, replica3=0ms
+$ docker compose restart
+time="2026-06-19T22:05:37+03:30" level=warning msg="/mnt/c/Users/sarag/Downloads/HW3/docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+ Container replica1  Restarting
+ Container replica2  Restarting
+ Container replica3  Restarting
+ Container replica2  Started
+ Container replica3  Started
+ Container replica1  Started
+
+── Waiting for all replicas to become healthy ────────────────────────────
+$ curl -s 'http://localhost:8080/health'
+  [2026-06-19 22:05:39] HEALTH replica1 -> HTTP 200 [OK]  round_trip=2.4ms  body={"replica": "replica1", "status": "ok", "time": "2026-06-19T18:35:39Z"}
+$ curl -s 'http://localhost:8081/health'
+  [2026-06-19 22:05:39] HEALTH replica2 -> HTTP 200 [OK]  round_trip=2.2ms  body={"replica": "replica2", "status": "ok", "time": "2026-06-19T18:35:39Z"}
+$ curl -s 'http://localhost:8082/health'
+  [2026-06-19 22:05:39] HEALTH replica3 -> HTTP 200 [OK]  round_trip=2.0ms  body={"replica": "replica3", "status": "ok", "time": "2026-06-19T18:35:39Z"}
+
+── Firing two conflicting writes to replica1 and replica2 simultaneously ─
+$ curl -s -X POST http://localhost:8080/put -H 'Content-Type: application/json' -d '{"key":"z","value":"from_r1"}'
+$ curl -s -X POST http://localhost:8081/put -H 'Content-Type: application/json' -d '{"key":"z","value":"from_r2"}'
+  [2026-06-19 22:05:39] PUT(concurrent, r1) replica1 -> HTTP 200 [OK]  round_trip=2.7ms  body={"success": true, "replica_id": "", "data": {"key": "z", "value": "from_r1", "version": 1, "updated_by": "replica1", "updated_at": "2026-06-19T18:35:39.091720962Z"}, "latency_ms": 0.285}
+  [2026-06-19 22:05:39] PUT(concurrent, r2) replica2 -> HTTP 200 [OK]  round_trip=3.4ms  body={"success": true, "replica_id": "", "data": {"key": "z", "value": "from_r2", "version": 1, "updated_by": "replica2", "updated_at": "2026-06-19T18:35:39.093650667Z"}, "latency_ms": 0.246}
+
+── Waiting 2s for replication to settle ──────────────────────────────────
+
+── Final values on all three replicas ────────────────────────────────────
+$ curl -s 'http://localhost:8080/get?key=z'
+  [2026-06-19 22:05:41] GET(final, replica1) replica1 -> HTTP 200 [OK]  round_trip=2.9ms  body={"success": true, "replica_id": "", "data": {"key": "z", "value": "from_r2", "version": 1, "updated_by": "replica2", "updated_at": "2026-06-19T18:35:39.093650667Z"}, "latency_ms": 0.057}
+$ curl -s 'http://localhost:8081/get?key=z'
+  [2026-06-19 22:05:41] GET(final, replica2) replica2 -> HTTP 200 [OK]  round_trip=2.0ms  body={"success": true, "replica_id": "", "data": {"key": "z", "value": "from_r2", "version": 1, "updated_by": "replica2", "updated_at": "2026-06-19T18:35:39.093650667Z"}, "latency_ms": 0.045}
+$ curl -s 'http://localhost:8082/get?key=z'
+  [2026-06-19 22:05:41] GET(final, replica3) replica3 -> HTTP 200 [OK]  round_trip=1.6ms  body={"success": true, "replica_id": "", "data": {"key": "z", "value": "from_r2", "version": 1, "updated_by": "replica2", "updated_at": "2026-06-19T18:35:39.093650667Z"}, "latency_ms": 0.036}
+
+── Result ────────────────────────────────────────────────────────────────
+  All replicas converged to a single value: True
+  Winning value (expected 'from_r2' since replica2 > replica1 lexicographically): from_r2

@@ -1,0 +1,36 @@
+
+==============================================================================
+SCENARIO 1 — Temporary Inconsistency (Eventual Consistency)
+==============================================================================
+[config] mode=eventual  delays: replica1=0ms, replica2=0ms, replica3=0ms
+$ docker compose restart
+time="2026-06-19T22:05:18+03:30" level=warning msg="/mnt/c/Users/sarag/Downloads/HW3/docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+ Container replica1  Restarting
+ Container replica2  Restarting
+ Container replica3  Restarting
+ Container replica3  Started
+ Container replica1  Started
+ Container replica2  Started
+
+── Waiting for all replicas to become healthy ────────────────────────────
+$ curl -s 'http://localhost:8080/health'
+  [2026-06-19 22:05:19] HEALTH replica1 -> HTTP 200 [OK]  round_trip=4.5ms  body={"replica": "replica1", "status": "ok", "time": "2026-06-19T18:35:19Z"}
+$ curl -s 'http://localhost:8081/health'
+  [2026-06-19 22:05:19] HEALTH replica2 -> HTTP 200 [OK]  round_trip=3.4ms  body={"replica": "replica2", "status": "ok", "time": "2026-06-19T18:35:19Z"}
+$ curl -s 'http://localhost:8082/health'
+  [2026-06-19 22:05:19] HEALTH replica3 -> HTTP 200 [OK]  round_trip=2.4ms  body={"replica": "replica3", "status": "ok", "time": "2026-06-19T18:35:19Z"}
+
+── Step 1: PUT x=10 on replica1 ──────────────────────────────────────────
+$ curl -s -X POST http://localhost:8080/put -H 'Content-Type: application/json' -d '{"key":"x","value":"10"}'
+  [2026-06-19 22:05:19] PUT replica1 -> HTTP 200 [OK]  round_trip=3.2ms  body={"success": true, "replica_id": "", "data": {"key": "x", "value": "10", "version": 1, "updated_by": "replica1", "updated_at": "2026-06-19T18:35:19.68659483Z"}, "latency_ms": 0.593}
+
+── Step 2: IMMEDIATELY read x from replica2 (expect stale / not found) ───
+$ curl -s 'http://localhost:8081/get?key=x'
+  [2026-06-19 22:05:19] GET(immediate) replica2 -> HTTP 200 [OK]  round_trip=4.3ms  body={"success": true, "replica_id": "", "data": {"key": "x", "value": "10", "version": 1, "updated_by": "replica1", "updated_at": "2026-06-19T18:35:19.68659483Z"}, "latency_ms": 0.032}
+
+── Step 3: Poll replica2 every 100ms until it converges (measuring convergence time) 
+$ curl -s 'http://localhost:8081/get?key=x'
+  [2026-06-19 22:05:19] GET(poll 1) replica2 -> HTTP 200 [OK]  round_trip=2.8ms  body={"success": true, "replica_id": "", "data": {"key": "x", "value": "10", "version": 1, "updated_by": "replica1", "updated_at": "2026-06-19T18:35:19.68659483Z"}, "latency_ms": 0.046}
+
+── Result ────────────────────────────────────────────────────────────────
+  Converged: True after 1 poll(s), ~5.6ms, 0 stale read(s) observed.

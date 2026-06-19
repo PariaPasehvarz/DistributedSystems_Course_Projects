@@ -1,0 +1,83 @@
+
+==============================================================================
+SCENARIO 2 — Replica Failure
+==============================================================================
+
+── Part A: Eventual consistency, replica3 stopped ────────────────────────
+[config] mode=eventual  delays: replica1=0ms, replica2=0ms, replica3=0ms
+$ docker compose restart
+time="2026-06-19T22:05:20+03:30" level=warning msg="/mnt/c/Users/sarag/Downloads/HW3/docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+ Container replica1  Restarting
+ Container replica3  Restarting
+ Container replica2  Restarting
+ Container replica1  Started
+ Container replica3  Started
+ Container replica2  Started
+
+── Waiting for all replicas to become healthy ────────────────────────────
+$ curl -s 'http://localhost:8080/health'
+  [2026-06-19 22:05:21] HEALTH replica1 -> HTTP 200 [OK]  round_trip=3.0ms  body={"replica": "replica1", "status": "ok", "time": "2026-06-19T18:35:21Z"}
+$ curl -s 'http://localhost:8081/health'
+  [2026-06-19 22:05:21] HEALTH replica2 -> HTTP 200 [OK]  round_trip=2.3ms  body={"replica": "replica2", "status": "ok", "time": "2026-06-19T18:35:21Z"}
+$ curl -s 'http://localhost:8082/health'
+  [2026-06-19 22:05:21] HEALTH replica3 -> HTTP 200 [OK]  round_trip=2.7ms  body={"replica": "replica3", "status": "ok", "time": "2026-06-19T18:35:21Z"}
+$ docker stop replica3
+replica3
+$ curl -s -X POST http://localhost:8080/put -H 'Content-Type: application/json' -d '{"key":"y","value":"42"}'
+  [2026-06-19 22:05:23] PUT(replica3 down, eventual) replica1 -> HTTP 200 [OK]  round_trip=2.8ms  body={"success": true, "replica_id": "", "data": {"key": "y", "value": "42", "version": 1, "updated_by": "replica1", "updated_at": "2026-06-19T18:35:23.119977956Z"}, "latency_ms": 0.225}
+$ docker start replica3
+replica3
+$ curl -s 'http://localhost:8082/health'
+  [2026-06-19 22:05:23] HEALTH replica3 -> HTTP 200 [OK]  round_trip=2.4ms  body={"replica": "replica3", "status": "ok", "time": "2026-06-19T18:35:23Z"}
+
+── Checking whether replica3 ever received y after recovery (no retry expected) 
+$ curl -s 'http://localhost:8082/get?key=y'
+  [2026-06-19 22:05:24] GET(replica3 after recovery) replica3 -> HTTP 404 [FAIL]  round_trip=5.0ms  body={"success": false, "replica_id": "", "error": "key not found", "latency_ms": 0}
+
+── Part B: Strong consistency, replica3 stopped (quorum 2/3 still reachable) 
+[config] mode=strong  delays: replica1=0ms, replica2=0ms, replica3=0ms
+$ docker compose restart
+time="2026-06-19T22:05:25+03:30" level=warning msg="/mnt/c/Users/sarag/Downloads/HW3/docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+ Container replica3  Restarting
+ Container replica2  Restarting
+ Container replica1  Restarting
+ Container replica3  Started
+ Container replica2  Started
+ Container replica1  Started
+
+── Waiting for all replicas to become healthy ────────────────────────────
+$ curl -s 'http://localhost:8080/health'
+  [2026-06-19 22:05:27] HEALTH replica1 -> HTTP 200 [OK]  round_trip=2.6ms  body={"replica": "replica1", "status": "ok", "time": "2026-06-19T18:35:27Z"}
+$ curl -s 'http://localhost:8081/health'
+  [2026-06-19 22:05:27] HEALTH replica2 -> HTTP 200 [OK]  round_trip=2.7ms  body={"replica": "replica2", "status": "ok", "time": "2026-06-19T18:35:27Z"}
+$ curl -s 'http://localhost:8082/health'
+  [2026-06-19 22:05:27] HEALTH replica3 -> HTTP 200 [OK]  round_trip=2.0ms  body={"replica": "replica3", "status": "ok", "time": "2026-06-19T18:35:27Z"}
+$ docker stop replica3
+replica3
+$ curl -s -X POST http://localhost:8080/put -H 'Content-Type: application/json' -d '{"key":"y","value":"99"}'
+  [2026-06-19 22:05:29] PUT(strong, 1 peer down) replica1 -> HTTP 200 [OK]  round_trip=9.6ms  body={"success": true, "replica_id": "", "data": {"key": "y", "value": "99", "version": 1, "updated_by": "replica1", "updated_at": "2026-06-19T18:35:29.117271832Z"}, "latency_ms": 6.073}
+
+── Part C: Strong consistency, replica2 ALSO stopped (quorum impossible) ─
+$ docker stop replica2
+replica2
+$ curl -s -X POST http://localhost:8080/put -H 'Content-Type: application/json' -d '{"key":"y","value":"100"}'
+  [2026-06-19 22:05:35] PUT(strong, 2 peers down) replica1 -> HTTP 503 [FAIL]  round_trip=5003.5ms  body={"success": false, "replica_id": "", "error": "quorum not reached: quorum not reached: got 0/1 acks, errors: [replica2: HTTP POST to http://replica2:8081/internal/replicate: Post \"http://replica2:8081/internal/replicate\": context deadline exceeded (Client.Timeout exceeded while awaiting headers) replica3: HTTP POST to http://replica3:8082/internal/replicate: Post \"http://replica3:8082/internal/replicate\": context deadline exceeded (Client.Timeout exceeded while awaiting headers)]", "latency_ms": 0}
+
+── Restoring all replicas ────────────────────────────────────────────────
+$ docker start replica2
+replica2
+$ docker start replica3
+replica3
+
+── Waiting for all replicas to become healthy ────────────────────────────
+$ curl -s 'http://localhost:8080/health'
+  [2026-06-19 22:05:37] HEALTH replica1 -> HTTP 200 [OK]  round_trip=1.7ms  body={"replica": "replica1", "status": "ok", "time": "2026-06-19T18:35:37Z"}
+$ curl -s 'http://localhost:8081/health'
+  [2026-06-19 22:05:37] HEALTH replica2 -> HTTP 200 [OK]  round_trip=1.5ms  body={"replica": "replica2", "status": "ok", "time": "2026-06-19T18:35:37Z"}
+$ curl -s 'http://localhost:8082/health'
+  [2026-06-19 22:05:37] HEALTH replica3 -> HTTP 200 [OK]  round_trip=1.6ms  body={"replica": "replica3", "status": "ok", "time": "2026-06-19T18:35:37Z"}
+
+── Result summary ────────────────────────────────────────────────────────
+  Eventual mode, 1 peer down: PUT still succeeded (True), replica3 caught up after restart: False (no retry mechanism, so this is expected to be False).
+  Strong mode, 1 peer down (quorum 2/3 reachable): PUT succeeded = True
+  Strong mode, 2 peers down (quorum impossible): PUT correctly failed = True
