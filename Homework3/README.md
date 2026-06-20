@@ -204,5 +204,3 @@ docker compose restart
 - PUT latency (ms)
 - GET latency (ms)
 - Convergence time (ms)
-- # replicas updated after each PUT
-- # stale reads observed

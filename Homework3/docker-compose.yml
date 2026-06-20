@@ -1,10 +1,5 @@
 version: "3.9"
 
-# All replicas share one Docker bridge network.
-# Within this network they resolve each other by service name (replica1, replica2, replica3).
-# From your WSL host, ports 8080/8081/8082 are forwarded so your client binary
-# can reach them via localhost.
-
 networks:
   kv-net:
     driver: bridge
