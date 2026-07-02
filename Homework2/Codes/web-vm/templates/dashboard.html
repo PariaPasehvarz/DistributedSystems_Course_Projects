@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>System Dashboard</title>
+    <link rel="stylesheet" type="text/css" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <h2>Welcome to the Distributed Dashboard</h2>
+        <p style="color: green; font-weight: bold;">✓ Successfully authenticated via JSON-RPC from VM 2!</p>
+        
+        <hr>
+        
+        <h3>Dynamic Asset Fetched from VM 3 via Go-RPC:</h3>
+        <div style="text-align: center; margin: 30px auto; max-width: 500px;">
+          <img src="/view-file?folder=images&name=galaxy.jpeg" 
+               alt="Distributed Dashboard Image" 
+               style="width: 100%; height: auto; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+      </div>
+        
+        <hr>
+        
+        <h3>Simulate Memory Breach (Pub/Sub Monitor Verification)</h3>
+        <p>Enter an amount greater than 300 MB to trigger the high memory alert chain to VM 4.</p>
+        <form action="/consume-memory" method="GET" target="_blank">
+            <label>Allocate Memory (MB):</label>
+            <input type="number" name="mb" value="310" min="1" required>
+            <button type="submit" class="btn" style="background-color: #e0a800;">Trigger System Allocation Leak</button>
+        </form>
+    </div>
+</body>
+</html>

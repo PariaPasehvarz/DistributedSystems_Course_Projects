@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Distributed Portal Login</title>
+    <link rel="stylesheet" type="text/css" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <h2>System Entry Portal</h2>
+        {{if .}} <p class="alert">{{.}}</p> {{end}}
+        <form action="/" method="POST">
+            <label>Username:</label>
+            <input type="text" name="username" required>
+            
+            <label>Password:</label>
+            <input type="password" name="password" required>
+            
+            <button type="submit" class="btn">Authenticate</button>
+        </form>
+    </div>
+</body>
+</html>
